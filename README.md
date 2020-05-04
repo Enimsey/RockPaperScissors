@@ -17,3 +17,7 @@ In a second terminal, launch playerui.py, enter your player name.
  
  # EXTENDED VERSION
  To test the extended version (command line or ui) with Rock Paper Scissors Lizard Spock, you just need to uncomment lines 9 and 10 and comment lines 5 and 6.
+ 
+ # REQUIREMENTS
+ Python >= 3.5 for PyQt5: https://pypi.org/project/PyQt5/
+ 
