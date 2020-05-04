@@ -11,12 +11,6 @@ def is_relevant(decision):
 
 
 class Player_UI(object):
-    socket = socket(AF_INET, SOCK_STREAM)
-    socket.settimeout(3)
-    score = 0
-    opponent_score = 0
-    rounds = 0
-    name = ""
     buttons = {}
 
     def setup_ui(self, main_window):
@@ -102,36 +96,96 @@ class Player_UI(object):
     def connect(self):
         # Callback for the connect button
         # Connects to the server if it is up
-        if len(self.textEditPlayer.toPlainText()) != 0:
+        pass
+
+    def choice(self, player_choice):
+        # Callback for all the possible choices buttons
+        pass
+
+    def restart(self):
+        # Callback for the restart button
+        self.set_ui_for_step(0)
+
+    def close_window(self, dialog):
+        # Callback for the close window button
+        dialog.close()
+
+    def set_interaction_text(self, info):
+        self.textGameInteraction.setPlainText(info)
+
+    def get_input_name(self):
+        return self.textEditPlayer.toPlainText()
+
+    def is_against_computer_mode(self):
+        return self.radioButtonAgainstComputer.isChecked()
+
+    def is_against_opponent_mode(self):
+        return self.radioButtonTwoPlayer.isChecked()
+
+    def set_ui_for_step(self, step):
+        if step == 0:  # before connection/after restart
+            self.textEditPlayer.setDisabled(False)
+            self.pushButtonConnect.setDisabled(False)
+
+            for i in POSSIBLE_CHOICES:
+                self.buttons[i].setDisabled(True)
+
+            self.textGameInteraction.setPlainText("Welcome to Rock Paper Scissors")
+
+            self.radioButtonTwoPlayer.setDisabled(False)
+            self.radioButtonAgainstComputer.setDisabled(False)
+            return
+        if step == 1:  # after connection
+            for i in POSSIBLE_CHOICES:
+                self.buttons[i].setDisabled(False)
+
+            self.pushButtonConnect.setDisabled(True)
+            self.textEditPlayer.setDisabled(True)
+            return
+        if step == 2:  # after choice before decision
+            # Disable the name/game mode editing
+            self.radioButtonTwoPlayer.setDisabled(True)
+            self.radioButtonAgainstComputer.setDisabled(True)
+            self.textEditPlayer.setDisabled(True)
+            # Disable sending another choice
+            for i in POSSIBLE_CHOICES:
+                self.buttons[i].setDisabled(True)
+            return
+        if step == 3:  # after decision
+            # Enable sending another choice
+            for i in POSSIBLE_CHOICES:
+                self.buttons[i].setDisabled(False)
+
+
+class Play(Player_UI):
+    socket = socket(AF_INET, SOCK_STREAM)
+    socket.settimeout(3)
+    score = 0
+    opponent_score = 0
+    rounds = 0
+    name = ""
+
+    def connect(self):
+        # Callback for the connect button
+        # Connects to the server if it is up
+        if len(self.get_input_name()) != 0:
             host = "localhost"
             port = 1111
             try:
                 self.socket.connect((host, port))
-                self.name = self.textEditPlayer.toPlainText()
+                self.name = self.get_input_name()
                 player_information = str(self.radioButtonAgainstComputer.isChecked()) + "@" + self.name
                 self.socket.send(player_information.encode("Utf8"))
-                if self.radioButtonAgainstComputer.isChecked():
-                    self.textGameInteraction.setPlainText("Connected: play against Computer")
+                if self.is_against_computer_mode():
+                    self.set_interaction_text("Connected: play against Computer")
                 else:
                     self.handle_two_player_mode_connection()
 
-                for i in POSSIBLE_CHOICES:
-                    self.buttons[i].setDisabled(False)
-
-                self.pushButtonConnect.setDisabled(True)
-                self.textEditPlayer.setDisabled(True)
+                self.set_ui_for_step(1)
             except:
-                self.textGameInteraction.setPlainText("Unable to connect to server")
+                self.set_interaction_text("Unable to connect to server")
         else:
-            self.textGameInteraction.setPlainText("Player name is mandatory")
-
-    def handle_two_player_mode_connection(self):
-        # Expects the server response when we connect
-        server_response = ""
-        while server_response == "":
-            server_response = self.socket.recv(255).decode(encoding="utf-8")
-
-        self.textGameInteraction.setPlainText(server_response + "\n")
+            self.set_interaction_text("Player name is mandatory")
 
     def choice(self, player_choice):
         # Callback for all the possible choices buttons
@@ -141,27 +195,19 @@ class Player_UI(object):
         try:
             self.socket.send(choice_str.encode("Utf8"))
         except:
-            self.textGameInteraction.setPlainText("Connection with server lost")
+            self.set_interaction_text("Connection with server lost")
             return
 
-        # Disable the name/game mode editing
-        self.radioButtonTwoPlayer.setDisabled(True)
-        self.radioButtonAgainstComputer.setDisabled(True)
-        self.textEditPlayer.setDisabled(True)
-        # Disable sending another choice
-        for i in POSSIBLE_CHOICES:
-            self.buttons[i].setDisabled(True)
+        self.set_ui_for_step(2)
 
         self.handle_decision()
 
-        # Enable sending another choice
-        for i in POSSIBLE_CHOICES:
-            self.buttons[i].setDisabled(False)
+        self.set_ui_for_step(3)
 
     def handle_decision(self):
         # Expects and handles the response of the server when a choice has been made by the player
         decision = self.socket.recv(255).decode(encoding="utf-8")
-        if self.radioButtonAgainstComputer.isChecked():
+        if self.is_against_computer_mode():
             while not (is_relevant(decision)):
                 decision = self.socket.recv(255).decode(encoding="utf-8")
             self.rounds += 1
@@ -170,11 +216,10 @@ class Player_UI(object):
                     self.score += 1
                 else:
                     self.opponent_score += 1
-            self.textGameInteraction.clear()
-            self.textGameInteraction.setPlainText(decision + "\nscore: " + str(self.score) + " against " + str(
+            self.set_interaction_text(decision + "\nscore: " + str(self.score) + " against " + str(
                 self.opponent_score) + "\n" + "Number of rounds: " + str(self.rounds))
             return
-        if self.radioButtonTwoPlayer.isChecked():
+        if self.is_against_opponent_mode():
             t0 = time.time()
             delta = 20  # wait 20 maximum seconds for decision
             while not (is_relevant(decision)):
@@ -188,33 +233,31 @@ class Player_UI(object):
                     self.score += 1
                 else:
                     self.opponent_score += 1
-            self.textGameInteraction.clear()
-            self.textGameInteraction.setPlainText(decision + "\nScore: " + str(self.score) + " against " + str(
+            self.set_interaction_text(decision + "\nScore: " + str(self.score) + " against " + str(
                 self.opponent_score) + "\n" + "Number of rounds: " + str(self.rounds))
+
+    def handle_two_player_mode_connection(self):
+        # Expects the server response when we connect
+        server_response = ""
+        while server_response == "":
+            server_response = self.socket.recv(255).decode(encoding="utf-8")
+
+        self.set_interaction_text(server_response + "\n")
 
     def restart(self):
         # Callback for the restart button
         # Re-initializes the socket and all variables related to a game
-        self.textEditPlayer.setDisabled(False)
-        self.pushButtonConnect.setDisabled(False)
-
-        for i in POSSIBLE_CHOICES:
-            self.buttons[i].setDisabled(True)
-
-        self.socket.close()
-        self.socket = socket(AF_INET, SOCK_STREAM)
-        self.textGameInteraction.setPlainText("Welcome to Rock Paper Scissors")
         self.score = 0
         self.opponent_score = 0
         self.rounds = 0
-
-        self.radioButtonTwoPlayer.setDisabled(False)
-        self.radioButtonAgainstComputer.setDisabled(False)
+        self.socket.close()
+        self.socket = socket(AF_INET, SOCK_STREAM)
+        super().restart()
 
     def close_window(self, dialog):
         # Callback for the close window button
         self.socket.close()
-        dialog.close()
+        super().close_window(dialog)
 
 
 if __name__ == "__main__":
@@ -222,7 +265,7 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
-    ui = Player_UI()
+    ui = Play()
     ui.setup_ui(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())

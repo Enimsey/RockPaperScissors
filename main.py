@@ -57,7 +57,7 @@ class Choice:
 
 
 def validate_input(input):
-    # This function validates a choice (whether it is an int and one of the possble choices)
+    # This function validates a choice (whether it is an int and one of the possible choices)
     return input in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] and int(
         input) in POSSIBLE_CHOICES
 

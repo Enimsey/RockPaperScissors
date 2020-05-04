@@ -1,4 +1,6 @@
 from main import *
+from serverui import parse_connection
+from playerui import is_relevant
 import unittest
 
 
@@ -46,7 +48,7 @@ class TestGame(unittest.TestCase):
 
         self.assertEqual(determine_who_wins(player1, player2), player1)
 
-    def test_compute_score(self):
+    def test_scores(self):
         winner = None
         players = ['A', 'B']
         scores = [0, 0]
@@ -64,6 +66,33 @@ class TestGame(unittest.TestCase):
         [scores, rounds] = compute_score(winner, players, scores, rounds)
         self.assertEqual(scores, [1, 1])
         self.assertEqual(rounds, 3)
+
+        scores_final = get_final_score(winner, players, scores, rounds)
+        self.assertEqual(scores_final, [1, 2])
+
+        scores_final = get_final_score(None, players, scores, rounds)
+        self.assertEqual(scores_final, [1, 2])
+
+    def test_parse_connection(self):
+        connection_string = b'False@Yasmine'
+        (player, mode) = parse_connection(connection_string)
+        self.assertFalse(mode)
+        self.assertTrue(player.name, "Yasmine")
+
+    def test_is_relevant(self):
+        self.assertTrue(is_relevant("Draw"))
+        self.assertFalse(is_relevant("toto"))
+        self.assertTrue(is_relevant("Human wins"))
+
+    def test_two_players_game(self):
+        winner = two_players_game("A", "B", 0, 0)
+        self.assertEqual(winner, None)
+
+        winner = two_players_game("A", "B", 0, 1)
+        self.assertEqual(winner.name, "B")
+
+        winner = two_players_game("A", "B", 1, 0)
+        self.assertEqual(winner.name, "A")
 
 
 if __name__ == '__main__':

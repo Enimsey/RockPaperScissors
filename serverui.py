@@ -23,15 +23,9 @@ class Worker(QRunnable, QObject):
 
 class Server_UI:
     def __init__(self, dialog):
-        self.thread_pool = QThreadPool()
         self.dialog = dialog
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.dialog)
-        self.connections = []
-        self.mode = True
-        self.players = []
-        self.client_sockets = []
-        self.tcpsock = None
-        self.session_number = 0
+        self.thread_pool = QThreadPool()
 
     def setup_ui(self):
         self.dialog.setObjectName("Dialog")
@@ -75,11 +69,42 @@ class Server_UI:
         self.close_window()
         event.accept()
 
+    def close_window(self):
+        # Callback for Close/Close window buttons
+        self.reset()
+        self.thread_pool.clear()
+        self.dialog.close()
+
+    def open_connection(self):
+        pass
+
+    def start(self):
+        # Callback for Start/Restart button
+        # It re-initializes all the variables related to the tcp socket,
+        # the threads and the players
+        self.reset()
+        worker = Worker(self.open_connection)
+        self.thread_pool.start(worker)
+
+    def reset(self):
+        self.thread_pool.clear()
+
+
+class Game(Server_UI):
+    def __init__(self, dialog):
+        super().__init__(dialog)
+        self.connections = []
+        self.mode = True
+        self.players = []
+        self.client_sockets = []
+        self.tcpsock = None
+        self.session_number = 0
+
     def open_connection(self):
         # Callback for the Start button
         self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.tcpsock.bind(("", 1111))
+        self.tcpsock.bind(("localhost", 1111))
         self.tcpsock.listen()
         while len(self.connections) < 2:
             try:
@@ -154,6 +179,16 @@ class Server_UI:
         self.thread_pool.start(worker_player0)
         self.thread_pool.start(worker_player1)
 
+    def parse_choice(self, choice):
+        # Parse the received choice and setting it to the corresponding player
+        # Example of input: b'Yasmine@1'
+        l = choice.decode(encoding="utf-8").split("@")
+        name = l[0]
+        choice = l[1]
+        for player in self.players:
+            if player.name == name:
+                player.set_choice(int(choice))
+
     def listen_to_player(self, client_idx):
         # Runs in a separate thread.
         # It listens to one player's choices
@@ -200,34 +235,6 @@ class Server_UI:
                 self.players.clear()
                 self.client_sockets.clear()
 
-    def parse_choice(self, choice):
-        # Parse the received choice and setting it to the corresponding player
-        # Example of input: b'Yasmine@1'
-        l = choice.decode(encoding="utf-8").split("@")
-        name = l[0]
-        choice = l[1]
-        for player in self.players:
-            if player.name == name:
-                player.set_choice(int(choice))
-
-    def start(self):
-        # Callback for Start/Restart button
-        # It re-initializes all the variables related to the tcp socket,
-        # the threads and the players
-        self.reset()
-        self.session_number += 1
-        self.textGameInfo.setPlainText("Session " + str(self.session_number))
-        self.pushButtonStart.setText("Restart")
-
-        worker = Worker(self.open_connection)
-        self.thread_pool.start(worker)
-
-    def close_window(self):
-        # Callback for Close/Close window buttons
-        self.reset()
-        self.thread_pool.clear()
-        self.dialog.close()
-
     def reset(self):
         self.connections = []
         self.mode = True
@@ -237,6 +244,9 @@ class Server_UI:
             self.tcpsock.close()
         self.thread_pool.clear()
         self.tcpsock = None
+        self.session_number += 1
+        self.textGameInfo.setPlainText("Session " + str(self.session_number))
+        self.pushButtonStart.setText("Restart")
 
 
 def parse_connection(connection):
@@ -254,6 +264,7 @@ def parse_connection(connection):
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()
     ui = Server_UI(Dialog)
