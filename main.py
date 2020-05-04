@@ -1,21 +1,17 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Apr 25 09:15:05 2020
-
-@author: ynajar
-"""
 import sys
 import random
-
-possibleChoices = [0, 1, 2]  # rock, paper, scissors
-possibleChoicesLabel = {0: "Rock", 1: "Paper", 2: "Scissors"}
-# possibleChoices = [0, 1, 2, 3, 4]  # rock, paper, scissors, Lizard, Spock
-# possibleChoicesLabel = {0: "Rock", 1: "Paper", 2: "Scissors", 3: "Lizard", 4: "Spock"}
-
 from getpass import getpass
+
+POSSIBLE_CHOICES = [0, 1, 2]  # rock, paper, scissors
+POSSIBLE_CHOICES_LABELS = {0: "Rock", 1: "Paper", 2: "Scissors"}
+
+
+# POSSIBLE_CHOICES = [0, 1, 2, 3, 4]  # rock, paper, scissors, Lizard, Spock
+# POSSIBLE_CHOICES_LABELS = {0: "Rock", 1: "Paper", 2: "Scissors", 3: "Lizard", 4: "Spock"}
 
 
 class Player:
+    # This Class represents the Player and their choice.
     def __init__(self, _name):
         self.name = _name
         self.choice = Choice(-1)
@@ -24,21 +20,20 @@ class Player:
     def __str__(self):
         return self.name
 
-    def setChoice(self, inputChoice):
-        self.choice.value = inputChoice
+    def set_choice(self, input_choice):
+        self.choice.value = input_choice
 
-    def setName(self, name):
-        self.name = name
-
-    def getChoiceValue(self):
+    def get_choice_value(self):
         return int(self.choice.value)
 
 
 class Choice:
+    # This Class represents the choice of a player
     def __init__(self, input_choice):
         self.value = input_choice
 
     def __gt__(self, other_choice):
+        # Overriding the operator greater then to compare two choices
         if self.value == 0:
             # Rock only wins against Scissors or Lizard
             return other_choice.value == 2 or other_choice.value == 3
@@ -56,34 +51,43 @@ class Choice:
             return other_choice.value == 0 or other_choice.value == 2
 
     def __str__(self):
-        if validateInput(self.value):
-            return possibleChoicesLabel[int(self.value)]
+        if validate_input(self.value):
+            return POSSIBLE_CHOICES_LABELS[int(self.value)]
         return str(self.value)
 
 
-def validateInput(input):
+def validate_input(input):
+    # This function validates a choice (whether it is an int and one of the possble choices)
     return input in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'] and int(
-        input) in possibleChoices
+        input) in POSSIBLE_CHOICES
 
 
-def playWithComputer(humanChoice, humanName):
-    if not (validateInput(humanChoice)):
-        sys.stdout.write(humanChoice + " is not a possible choice, choose among: " + str(possibleChoices) +"\n")
+def play_with_computer_object(player):
+    # This Function, takes a human player,
+    # creates a bot player with a random choice,
+    # and returns the winner among them
+
+    bot_player = Player("Computer")
+    bot_player.set_choice(random.randint(0, max(POSSIBLE_CHOICES)))
+
+    return determine_who_wins(player, bot_player)
+
+
+def play_with_computer(human_choice, human_name):
+    # Same as the above, but with different inputs instead
+    if not (validate_input(human_choice)):
+        sys.stdout.write(human_choice + " is not a possible choice, choose among: " + str(POSSIBLE_CHOICES) + "\n")
         return
-    humanPlayer = Player(humanName)
-    humanPlayer.setChoice(int(humanChoice))
+    human_player = Player(human_name)
+    human_player.set_choice(int(human_choice))
 
-    return playWithComputerObject(humanPlayer)
-
-
-def playWithComputerObject(player):
-    botPlayer = Player("Computer")
-    botPlayer.setChoice(random.randint(0, max(possibleChoices)))
-
-    return determineWhoWins(player, botPlayer)
+    return play_with_computer_object(human_player)
 
 
-def determineWhoWins(player1, player2):
+def determine_who_wins(player1, player2):
+    # This function determines who among the two players wins.
+    # If it is a draw, it return None
+    # Else, it returns the player who wins
     if int(player1.choice.value) == int(player2.choice.value):
         sys.stdout.write("         Draw\n")
         return
@@ -100,22 +104,25 @@ def determineWhoWins(player1, player2):
             return player2
 
 
-def twoPlayersGame(player_name1, player_name2, player_choice1, player_choice2):
-    if validateInput(player_choice1) and validateInput(player_choice2):
+def two_players_game(player_name1, player_name2, player_choice1, player_choice2):
+    # This function takes two players names and their choices.
+    # It returns who wins/None if their choices are valid
+    if validate_input(player_choice1) and validate_input(player_choice2):
         human_player1 = Player(player_name1)
-        human_player1.setChoice(int(player_choice1))
+        human_player1.set_choice(int(player_choice1))
         human_player2 = Player(player_name2)
-        human_player2.setChoice(int(player_choice2))
+        human_player2.set_choice(int(player_choice2))
 
-        return determineWhoWins(human_player1, human_player2)
+        return determine_who_wins(human_player1, human_player2)
 
-    sys.stderr.write(player_choice1 + " or " + player_choice2 + " is not a possible choice, choose among: " + str(possibleChoices) +"\n")
+    sys.stderr.write(player_choice1 + " or " + player_choice2 + " is not a possible choice, choose among: " + str(
+        POSSIBLE_CHOICES) + "\n")
     return
 
 
-def computeScore(winner, players, scores, rounds):
+def compute_score(winner, players, scores, rounds):
     rounds += 1
-    if winner == None:
+    if winner is None:
         sys.stdout.write(players[0].__str__() + " : " + str(scores[0]) + "\n")
         sys.stdout.write(players[1].__str__() + " : " + str(scores[1]) + "\n")
         return scores, rounds
@@ -129,9 +136,9 @@ def computeScore(winner, players, scores, rounds):
     return scores, rounds
 
 
-def getFinalScore(winner, players, scores, rounds):
+def get_final_score(winner, players, scores, rounds):
     sys.stdout.write(' /*\/*\/*\/*\/*\ Final Score /*\/*\/*\/*\/*\ ' + "\n")
-    [scores, _] = computeScore(winner, players, scores, rounds)
+    [scores, _] = compute_score(winner, players, scores, rounds)
     if scores[0] == scores[1]:
         sys.stdout.write("Draw\n")
     else:
@@ -150,34 +157,34 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
             if sys.argv[1] == '1':
                 sys.stdout.write("Playing with the computer\n")
-                # winner = playWithComputer(sys.argv[1], "Human")
+                # winner = play_with_computer(sys.argv[1], "Human")
                 do_continue = "Y"
                 scores = [0, 0]
                 rounds = 0
                 players = ["Human", "Computer"]
-                # [scores, rounds] = computeScore(winner, players, scores, rounds)
+                # [scores, rounds] = compute_score(winner, players, scores, rounds)
                 while do_continue != 'n':
                     user_input = input("Your choice \n")
-                    winner = playWithComputer(user_input, "Human")
+                    winner = play_with_computer(user_input, "Human")
                     sys.stdout.write("****** Score ******\n")
-                    [scores, rounds] = computeScore(winner, players, scores, rounds)
+                    [scores, rounds] = compute_score(winner, players, scores, rounds)
                     do_continue = input("continue?  [Y/n]")
-                getFinalScore(winner, players, scores, rounds)
+                get_final_score(winner, players, scores, rounds)
             else:
                 if sys.argv[1] == '2':
-                    # winner = twoPlayersGame("player1", "player2", sys.argv[1], sys.argv[2])
+                    # winner = two_players_game("player1", "player2", sys.argv[1], sys.argv[2])
                     user_input = "Y"
                     scores = [0, 0]
                     rounds = 0
                     players = ["player1", "player2"]
-                    # [scores, rounds] = computeScore(winner, players, scores, rounds)
+                    # [scores, rounds] = compute_score(winner, players, scores, rounds)
                     while user_input != 'n':
                         user_input1 = getpass("first player choice \n")
                         user_input2 = getpass("second player choice \n")
-                        winner = twoPlayersGame("player1", "player2", user_input1, user_input2)
+                        winner = two_players_game("player1", "player2", user_input1, user_input2)
                         sys.stdout.write("****** Score ******\n")
-                        [scores, rounds] = computeScore(winner, players, scores, rounds)
+                        [scores, rounds] = compute_score(winner, players, scores, rounds)
                         user_input = input("continue?  [Y/n]")
-                    getFinalScore(winner, players, scores, rounds)
+                    get_final_score(winner, players, scores, rounds)
         else:
             sys.stderr.write("too many input arguments\n")
