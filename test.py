@@ -4,11 +4,12 @@ import unittest
 
 class TestGame(unittest.TestCase):
 
-    def test_validateInput(self):
-        self.assertTrue(validateInput(0))
-        self.assertTrue(validateInput(1))
-        self.assertTrue(validateInput(2))
-        self.assertFalse(validateInput(5))
+    def test_validate_input(self):
+        self.assertTrue(validate_input(0))
+        self.assertTrue(validate_input(1))
+        self.assertTrue(validate_input(2))
+        self.assertFalse(validate_input('A'))
+        self.assertFalse(validate_input('8'))
 
     def test_gt(self):
         choice1 = Choice(0)
@@ -26,7 +27,7 @@ class TestGame(unittest.TestCase):
 
         self.assertTrue(choice1 > choice2)
 
-    def test_determineWhoWins(self):
+    def test_determine_who_wins(self):
         player1 = Player("player1")
         player2 = Player("player2")
 
@@ -45,7 +46,7 @@ class TestGame(unittest.TestCase):
 
         self.assertEqual(determine_who_wins(player1, player2), player1)
 
-    def test_computeScore(self):
+    def test_compute_score(self):
         winner = None
         players = ['A', 'B']
         scores = [0, 0]
