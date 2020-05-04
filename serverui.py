@@ -1,47 +1,39 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'client.ui'
-#
-# Created by: PyQt5 UI code generator 5.14.2
-#
-# WARNING! All changes made in this file will be lost!
-
-from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+import time
+from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import *
-import traceback, sys
+import traceback
 from main import *
 
 import socket
 
-class Worker(QRunnable):
+
+class Worker(QRunnable, QObject):
     def __init__(self, fn):
         super(Worker, self).__init__()
         self.fn = fn
-        print ("New Worker")
-        
+
     @pyqtSlot()
     def run(self):
         try:
             self.fn()
         except:
-            print("issue running the worker function")
+            print("Issue running the worker function")
             traceback.print_exc()
-            exctype, value = sys.exc_info()[:2]
-    
-class Ui_Dialog():
-    def __init__(self, Dialog):
-        self.threadpool = QThreadPool()
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-        self.dialog = Dialog
+
+
+class Game:
+    def __init__(self, dialog):
+        self.thread_pool = QThreadPool()
+        self.dialog = dialog
         self.horizontalLayoutWidget = QtWidgets.QWidget(self.dialog)
         self.connections = []
         self.mode = True
         self.players = []
-        self.clientSockets = []
-        
-    def setupUi(self, Dialog):
+        self.client_sockets = []
+        self.tcpsock = None
+        self.session_number = 0
+
+    def setup_ui(self):
         self.dialog.setObjectName("Dialog")
         self.dialog.resize(250, 150)
         self.horizontalLayoutWidget.setGeometry(QtCore.QRect(20, 20, 210, 110))
@@ -50,184 +42,221 @@ class Ui_Dialog():
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        
         self.pushButtonStart = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.pushButtonStart.setObjectName("pushButtonStart")
         self.pushButtonStart.clicked.connect(self.start)
-        
+
         self.pushButtonCancel = QtWidgets.QPushButton(self.horizontalLayoutWidget)
         self.horizontalLayout.addWidget(self.pushButtonCancel)
         self.horizontalLayout.addWidget(self.pushButtonStart)
         self.pushButtonCancel.setObjectName("pushButtonCancel")
-        
+
         self.textGameInfo = QtWidgets.QTextEdit(self.horizontalLayoutWidget)
         self.textGameInfo.setObjectName("textGameInfo")
-        self.textGameInfo.setPlainText("textGameInfo")
+        self.textGameInfo.setPlainText("Welcome to Rock Paper Scissors")
         self.textGameInfo.setDisabled(True)
-        
+
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.verticalLayout.addWidget(self.textGameInfo)
-        
-        self.pushButtonCancel.clicked.connect(self.closeWindow)
-        
-        self.retranslateUi(self.dialog)
+
+        self.pushButtonCancel.clicked.connect(self.close_window)
+        app.aboutToQuit.connect(self.close_window)
+        self.retranslate_ui()
         QtCore.QMetaObject.connectSlotsByName(self.dialog)
 
-    def retranslateUi(self, Dialog):
+    def retranslate_ui(self):
         _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
+        self.dialog.setWindowTitle(_translate("Dialog", "Dialog"))
         self.pushButtonStart.setText(_translate("Dialog", "Start"))
         self.pushButtonCancel.setText(_translate("Dialog", "Cancel"))
-    
-    def openConnection(self):
-        print ("Connecting")
+
+    def close_event(self, event):
+        # Callback for the Close Window and Cancel buttons
+        self.close_window()
+        event.accept()
+
+    def open_connection(self):
+        # Callback for the Start button
         self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.tcpsock.bind(("",1111))
+        self.tcpsock.bind(("", 1111))
         self.tcpsock.listen()
-        self.textGameInfo.setPlainText("Listening")
-        # self.textGameInfo.setPlainText("Listening...")
         while len(self.connections) < 2:
             try:
-                (clientsocket, (ip, port)) = self.tcpsock.accept()
+                (client_socket, (ip, port)) = self.tcpsock.accept()
+                connection = client_socket.recv(255)
+                if connection != "" and not (port in self.connections):
+                    (player, mode) = parse_connection(connection)
+                    self.mode = mode
+                    self.players.append(player)
+                    self.client_sockets.append(client_socket)
+                    self.connections.append(port)
+
+                    if mode:
+                        # if against computer, no need to listen to other connections
+                        break
+                    else:
+                        self.handle_multi_player_connection(player, client_socket)
             except:
                 print("Lost connection with socket")
                 return
-            print(clientsocket)
-            print(ip)
-            print(port)
-            connection = clientsocket.recv(255) 
-            if connection != "" and not(port in self.connections):
-                (player, mode) = self.parseConnection(connection)
-                print (connection)
-                self.mode = mode
-                self.players.append(player)
-                self.clientSockets.append(clientsocket)
-                self.connections.append(port)
 
-                if mode:
-                    # if against computer, no need to listen to other connections
-                    self.textGameInfo.setPlainText(player.__str__() + " wants to play against computer")
-                    break
-                else:
-                    if len(self.connections) == 1:
-                        self.textGameInfo.setPlainText(player.__str__() + " connected:\n Expect second player")
-                        clientsocket.send((player.__str__() + " connected:\n Expect second player").encode("Utf8"))
-                    if len(self.connections) == 2:
-                        self.textGameInfo.setPlainText("Both players connected")
-                        self.clientSockets[0].send(("You are playing against "+ self.players[1].__str__()+ "\n Make your choice").encode("Utf8"))
-                        self.clientSockets[1].send(("You are playing against "+ self.players[0].__str__()+ "\n Make your choice").encode("Utf8"))
-                        break;
-                    
-            
-        if(self.mode):# against computer
-            self.playAgainstComputer()
+        if self.mode:  # against computer
+            self.play_against_computer()
         else:
-            self.playAgainstOpponent()
-            
-    def playAgainstComputer(self):
-        noException = True
-        while noException:
+            self.play_against_opponent()
+
+    def handle_multi_player_connection(self, player, client_socket):
+        # Handles the connection of two players to the socket
+        # Sends information about the connection to the players
+        if len(self.connections) == 1:
+            client_socket.send((player.__str__() + " connected:\nExpect second player").encode("Utf8"))
+        if len(self.connections) == 2:
+            self.client_sockets[0].send(
+                ("You are playing against " + self.players[1].__str__() + "\n Make your choice").encode(
+                    "Utf8"))
+            self.client_sockets[1].send(
+                ("You are playing against " + self.players[0].__str__() + "\n Make your choice").encode(
+                    "Utf8"))
+
+    def play_against_computer(self):
+        # Handles a Game against the computer
+        while True:
             try:
                 choice = ""
-                while(choice == ""):
-                    choice = self.clientSockets[0].recv(255)
-                print(choice)
-                self.parseChoice(choice)
-                winner = playWithComputerObject(self.players[0]) 
-                
-                if(winner == None):
-                    self.textGameInfo.setPlainText("Draw")
-                    self.clientSockets[0].send("Draw".encode("Utf8"))
+                while choice == "":
+                    choice = self.client_sockets[0].recv(255)
+                self.parse_choice(choice)
+                winner = play_with_computer_object(self.players[0])
+
+                if winner == None:
+                    # self.textGameInfo.setPlainText("Draw")
+                    self.client_sockets[0].send("Draw".encode("Utf8"))
                 else:
-                    self.textGameInfo.setPlainText(winner.__str__() + " wins")
-                    self.clientSockets[0].send((winner.__str__() + " wins").encode("Utf8"))
+                    self.client_sockets[0].send((
+                            winner.__str__() + " wins with " + winner.choice.__str__() + " against " + winner.opponent_choice.__str__()).encode(
+                        "Utf8"))
             except:
-                self.textGameInfo.setPlainText(self.players[0].__str__()+ " was disconnected")
-                print(self.players[0].__str__()+ " was disconnected")
-                noException = False
+                print("Disconnected")
                 self.tcpsock.close()
-                # self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.connections.clear()
                 self.players.clear()
-                self.clientSockets.clear()
-                return
-            
-    def playAgainstOpponent(self):
-        assert(len(self.players) == 2)
-        worker_player0= Worker(lambda:self.listenToPlayer((0)))
-        worker_player1 = Worker(lambda:self.listenToPlayer((1)))
-        self.threadpool.start(worker_player0)
-        self.threadpool.start(worker_player1)
-        
-    def listenToPlayer(self, clientIdx):
-        noException = True
-        while noException:
+                self.client_sockets.clear()
+                break
+
+    def play_against_opponent(self):
+        # Handles a Game for two players.
+        # It opens starts two threads for each player, to listen to their choices
+        # Each thread, runs the method listen_to_player
+        assert (len(self.players) == 2)
+        worker_player0 = Worker(lambda: self.listen_to_player(0))
+        worker_player1 = Worker(lambda: self.listen_to_player(1))
+        self.thread_pool.start(worker_player0)
+        self.thread_pool.start(worker_player1)
+
+    def listen_to_player(self, client_idx):
+        # Runs in a separate thread.
+        # It listens to one player's choices
+        # Send the results to both players, if both choices have been made
+        no_exception = True
+        while no_exception:
             try:
                 choice = ""
-                while(choice == ""):
-                    choice = self.clientSockets[clientIdx].recv(255)
-                print(choice)
-                self.parseChoice(choice)
-                if self.players[1-clientIdx].getChoiceValue() != 3:  
-                    winner = determineWhoWins(self.players[clientIdx], self.players[1-clientIdx]) 
-                    if(winner == None):
-                        self.textGameInfo.setPlainText("Draw")
-                        self.clientSockets[clientIdx].send("Draw".encode("Utf8"))
-                        self.clientSockets[1-clientIdx].send("Draw".encode("Utf8"))
-                        # self.tcpsock.sendall("Draw".encode("Utf8"))
+                t0 = time.time()
+                delta = 10  # wait 10 maximum seconds for decision, otherwise reset the choices
+                while choice == "":
+                    choice = self.client_sockets[client_idx].recv(255)
+                    if self.players[1 - client_idx].get_choice_value() > 0 and delta < time.time() - t0:
+                        print("Unable to get choice")
+                        self.players[1 - client_idx].set_choice(-1)
+                        self.players[client_idx].set_choice(-1)
+                        break
+                if choice != "":
+                    self.parse_choice(choice)
+                    if self.players[1 - client_idx].get_choice_value() != -1:
+                        winner = determine_who_wins(self.players[client_idx], self.players[1 - client_idx])
+                        if winner == None:
+                            self.client_sockets[client_idx].send("Draw".encode("Utf8"))
+                            self.client_sockets[1 - client_idx].send("Draw".encode("Utf8"))
+                        else:
+                            self.client_sockets[client_idx].send((
+                                    winner.__str__() + " wins with " + winner.choice.__str__() + " against " + winner.opponent_choice.__str__()).encode(
+                                "Utf8"))
+                            self.client_sockets[1 - client_idx].send((
+                                    winner.__str__() + " wins with " + winner.choice.__str__() + " against " + winner.opponent_choice.__str__()).encode(
+                                "Utf8"))
+
+                        # Reset both choices
+                        self.players[client_idx].set_choice(-1)
+                        self.players[1 - client_idx].set_choice(-1)
                     else:
-                        self.textGameInfo.setPlainText(winner.__str__() + " wins")
-                        self.clientSockets[clientIdx].send((winner.__str__() + " wins").encode("Utf8"))
-                        self.clientSockets[1-clientIdx].send((winner.__str__() + " wins").encode("Utf8"))
-                    # Reset both choices
-                    self.players[clientIdx].setChoice(3)
-                    self.players[1-clientIdx].setChoice(3) 
-                else:
-                    self.clientSockets[clientIdx].send(("Expect " + self.players[1-clientIdx].__str__() + "'s choice").encode("Utf8"))
-                    
+                        self.client_sockets[client_idx].send(
+                            ("Expect " + self.players[1 - client_idx].__str__() + "'s choice").encode("Utf8"))
             except:
-                print("players were disconnected")
-                noException = False
+                print("Players were disconnected")
+                no_exception = False
                 self.tcpsock.close()
-                # self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.connections.clear()
                 self.players.clear()
-                self.clientSockets.clear()
-            
-    def parseConnection(self, connection):
-        L = connection.decode(encoding="utf-8").split("@")
-        player = Player(L[1])
-        mode = L[0] == "True" # True is against computer, False is two players
-        return (player, mode)
-    
-    def parseChoice(self, choice):
-        L = choice.decode(encoding="utf-8").split("@")
-        name = L[0]
-        choice = L[1]
+                self.client_sockets.clear()
+
+    def parse_choice(self, choice):
+        # Parse the received choice and setting it to the corresponding player
+        # Example of input: b'Yasmine@1'
+        l = choice.decode(encoding="utf-8").split("@")
+        name = l[0]
+        choice = l[1]
         for player in self.players:
             if player.name == name:
-                player.setChoice(int(choice))
-         
+                player.set_choice(int(choice))
+
     def start(self):
-        print ("Start")
+        # Callback for Start/Restart button
+        # It re-initializes all the variables related to the tcp socket,
+        # the threads and the players
+        self.reset()
+        self.session_number += 1
+        self.textGameInfo.setPlainText("Session " + str(self.session_number))
         self.pushButtonStart.setText("Restart")
-        self.threadpool.clear()
-        worker = Worker(self.openConnection)
-        self.threadpool.start(worker)
-        print("Multithreading with maximum %d threads" % self.threadpool.activeThreadCount())
-        
-    def closeWindow(self):
-        print ("Close")
-        self.tcpsock.close()
-        self.threadpool.clear()
-        self.dialog.close()        
-        
+
+        worker = Worker(self.open_connection)
+        self.thread_pool.start(worker)
+
+    def close_window(self):
+        # Callback for Close/Close window buttons
+        self.reset()
+        self.thread_pool.clear()
+        self.dialog.close()
+
+    def reset(self):
+        self.connections = []
+        self.mode = True
+        self.players = []
+        self.client_sockets = []
+        if self.tcpsock is not None:
+            self.tcpsock.close()
+        self.thread_pool.clear()
+        self.tcpsock = None
+
+
+def parse_connection(connection):
+    # Parses the received string from a client to determine the name of the player
+    # and whether they are playing against the computer (mode = True)
+    # or against another player (mode = False)
+    # Example of input: b'False@Yasmine'
+    # Output should be ("Yasmine", False)
+
+    L = connection.decode(encoding="utf-8").split("@")
+    player = Player(L[1])
+    mode = L[0] == "True"  # True is against computer, False is two players
+    return player, mode
+
+
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()
-    ui = Ui_Dialog(Dialog)
-    ui.setupUi(Dialog)
+    ui = Game(Dialog)
+    ui.setup_ui()
     Dialog.show()
     sys.exit(app.exec_())
