@@ -157,12 +157,10 @@ if __name__ == "__main__":
         if len(sys.argv) == 2:
             if sys.argv[1] == '1':
                 sys.stdout.write("Playing with the computer\n")
-                # winner = play_with_computer(sys.argv[1], "Human")
                 do_continue = "Y"
                 scores = [0, 0]
                 rounds = 0
                 players = ["Human", "Computer"]
-                # [scores, rounds] = compute_score(winner, players, scores, rounds)
                 while do_continue != 'n':
                     user_input = input("Your choice \n")
                     winner = play_with_computer(user_input, "Human")
@@ -172,12 +170,10 @@ if __name__ == "__main__":
                 get_final_score(winner, players, scores, rounds)
             else:
                 if sys.argv[1] == '2':
-                    # winner = two_players_game("player1", "player2", sys.argv[1], sys.argv[2])
                     user_input = "Y"
                     scores = [0, 0]
                     rounds = 0
                     players = ["player1", "player2"]
-                    # [scores, rounds] = compute_score(winner, players, scores, rounds)
                     while user_input != 'n':
                         user_input1 = getpass("first player choice \n")
                         user_input2 = getpass("second player choice \n")
