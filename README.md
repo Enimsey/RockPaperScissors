@@ -16,4 +16,4 @@ In a second terminal, launch playerui.py, enter your player name.
  To restart a session (to change the game mode, reinitialize the score, the player name, click restart on server and player ui's)
  
  # EXTENDED VERSION
- To test the extended version (command line or ui) with Rock Paper Scissors Paper Spock, you just need to uncomment lines 9 and 10 and comment lines 5 and 6.
+ To test the extended version (command line or ui) with Rock Paper Scissors Lizard Spock, you just need to uncomment lines 9 and 10 and comment lines 5 and 6.
