@@ -11,9 +11,9 @@ In a second terminal, launch playerui.py, enter your player name.
         You can already start playing by picking rock paper or scissors.                                                                                            
       b/ Against Friend mode: Check the radio button with label "2" (for game against a friend) and click connect
         Your friend needs to do the same (in a new terminal)                                                                                            
-        Once your friend is connected two, you can start picking rock, paper or scissors...                                                                                       
+        Once your friend is connected too, you can start picking rock, paper or scissors...                                                                                       
                                                                                                     
- To restart a session (to change the game mode, reinitialize the score, the player name, click restart on server and player ui's)
+ To restart a session (to change the game mode, reinitialize the score, the player name), click restart on server and player ui's
  
  # EXTENDED VERSION
  To test the extended version (command line or ui) with Rock Paper Scissors Lizard Spock, you just need to uncomment lines 9 and 10 and comment lines 5 and 6.
