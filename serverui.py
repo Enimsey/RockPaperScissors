@@ -21,7 +21,7 @@ class Worker(QRunnable, QObject):
             traceback.print_exc()
 
 
-class Game:
+class Server_UI:
     def __init__(self, dialog):
         self.thread_pool = QThreadPool()
         self.dialog = dialog
@@ -256,7 +256,7 @@ if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     Dialog = QtWidgets.QDialog()
-    ui = Game(Dialog)
+    ui = Server_UI(Dialog)
     ui.setup_ui()
     Dialog.show()
     sys.exit(app.exec_())
